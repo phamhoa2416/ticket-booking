@@ -1,12 +1,12 @@
 package users.repository
 
+import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toLocalDateTime
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.mindrot.jbcrypt.BCrypt
 import users.models.dto.UserCreateDTO
 import users.models.dto.UserResponseDTO
 import users.models.dto.UserUpdateDTO
@@ -27,6 +27,12 @@ interface UserRepository {
     suspend fun getUserByEmail(email: String): UserResponseDTO?
     suspend fun existsByUsername(username: String): Boolean
     suspend fun existsByEmail(email: String): Boolean
+    suspend fun findAll(page: Int, pageSize: Int): List<UserResponseDTO>
+    suspend fun softDeleteUser(userId: UUID)
+    suspend fun restoreUser(userId: UUID)
+    suspend fun batchCreateUsers(users: List<UserCreateDTO>): List<UserResponseDTO>
+    suspend fun batchUpdateUsers(updates: Map<UUID, UserUpdateDTO>): List<UserResponseDTO>
+    suspend fun batchDeleteUsers(userIds: List<UUID>)
 }
 
 class UserRepositoryImpl : UserRepository {
@@ -42,6 +48,7 @@ class UserRepositoryImpl : UserRepository {
             dateOfBirth = user.dateOfBirth?.toJavaLocalDate()
             avatarUrl = user.avatarUrl
             role = user.role
+            isDeleted = false
         }.toUserResponseDTO()
     }
 
@@ -84,6 +91,38 @@ class UserRepositoryImpl : UserRepository {
         !UserEntity.find { User.email eq email }.empty()
     }
 
+    override suspend fun findAll(page: Int, pageSize: Int): List<UserResponseDTO> = transaction {
+        UserEntity.all()
+            .orderBy(User.createdAt to SortOrder.DESC)
+            .limit(pageSize)
+            .offset((page - 1) * pageSize.toLong())
+            .map { it.toUserResponseDTO() }
+    }
+
+    override suspend fun softDeleteUser(userId: UUID) = transaction {
+        val user = UserEntity.findById(userId) ?: throw NoSuchElementException("User with ID $userId not found")
+        user.isDeleted = true
+        user.updatedAt = Clock.System.now().toLocalDateTime(TimeZone.UTC).toJavaLocalDateTime()
+    }
+
+    override suspend fun restoreUser(userId: UUID) = transaction {
+        val user = UserEntity.findById(userId) ?: throw NoSuchElementException("User with ID $userId not found")
+        user.isDeleted = false
+        user.updatedAt = Clock.System.now().toLocalDateTime(TimeZone.UTC).toJavaLocalDateTime()
+    }
+
+    override suspend fun batchCreateUsers(users: List<UserCreateDTO>): List<UserResponseDTO> = transaction {
+        users.map { runBlocking { createUser(it) } }
+    }
+
+    override suspend fun batchUpdateUsers(updates: Map<UUID, UserUpdateDTO>): List<UserResponseDTO> = transaction {
+        updates.map { (id, update) -> runBlocking { updateUser(id, update) } }
+    }
+
+    override suspend fun batchDeleteUsers(userIds: List<UUID>) = transaction {
+        userIds.forEach { runBlocking { deleteUser(it) } }
+    }
+
     private fun UserEntity.toUserResponseDTO(): UserResponseDTO {
         return UserResponseDTO(
             id = id.value,
@@ -94,6 +133,7 @@ class UserRepositoryImpl : UserRepository {
             avatarUrl = avatarUrl,
             role = role,
             isVerified = isVerified,
+            isDeleted = isDeleted,
             createdAt = createdAt.toKotlinxDateTime(),
             updatedAt = updatedAt?.toKotlinxDateTime(),
             lastLogin = lastLogin?.toKotlinxDateTime(),
