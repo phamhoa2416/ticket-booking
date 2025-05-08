@@ -7,7 +7,7 @@ import org.jetbrains.exposed.dao.id.UUIDTable
 import java.math.BigDecimal
 import java.util.UUID
 
-object Customers : UUIDTable() {
+object Customer : UUIDTable() {
     val customerId = reference("customer_id", Users).uniqueIndex()
     val totalSpending = decimal("total_spending", 10, 2).default(BigDecimal.ZERO)
     val preferredCategory = text("preferred_category").nullable()
@@ -17,12 +17,12 @@ object Customers : UUIDTable() {
 }
 
 class CustomerEntity(id: EntityID<UUID>) : UUIDEntity(id) {
-    companion object : UUIDEntityClass<CustomerEntity>(Customers)
+    companion object : UUIDEntityClass<CustomerEntity>(Customer)
 
-    var user by UserEntity referencedOn Customers.customerId
-    var totalSpending by Customers.totalSpending
-    var preferredCategory by Customers.preferredCategory
-    var paymentMethods by Customers.paymentMethods
+    var user by UserEntity referencedOn Customer.customerId
+    var totalSpending by Customer.totalSpending
+    var preferredCategory by Customer.preferredCategory
+    var paymentMethods by Customer.paymentMethods
 
     // Relationships
 }

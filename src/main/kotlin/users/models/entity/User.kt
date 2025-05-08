@@ -39,7 +39,7 @@ class UserEntity(id: EntityID<UUID>) : UUIDEntity(id) {
     var lastLogin by Users.lastLogin
 
     // Relationships
-    val customer by CustomerEntity referrersOn Customers.customerId
+    val customer by CustomerEntity referrersOn Customer.customerId
     val organizer by OrganizerEntity referrersOn Organizer.organizerId
     val admin by AdminEntity referrersOn Admin.adminId
 }
