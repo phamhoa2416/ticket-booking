@@ -12,7 +12,7 @@ enum class TicketStatus {
 
     companion object {
         fun isActive(status: TicketStatus): Boolean {
-            return status == CONFIRMED || status == TRANSFERRED
+            return status in listOf(CONFIRMED, TRANSFERRED)
         }
 
         fun canBeTransferred(status: TicketStatus): Boolean {
@@ -25,6 +25,22 @@ enum class TicketStatus {
 
         fun isTerminated(status: TicketStatus): Boolean {
             return status in listOf(CANCELLED, REFUNDED, EXPIRED, USED, INVALID)
+        }
+
+        fun canBeCancelled(status: TicketStatus): Boolean {
+            return status in listOf(CONFIRMED, PENDING_PAYMENT)
+        }
+
+        fun isPending(status: TicketStatus): Boolean {
+            return status == PENDING_PAYMENT
+        }
+
+        fun isCompleted(status: TicketStatus): Boolean {
+            return status == USED
+        }
+
+        fun isRefundable(status: TicketStatus): Boolean {
+            return status in listOf(CONFIRMED, PENDING_PAYMENT)
         }
     }
 }
