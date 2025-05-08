@@ -8,7 +8,7 @@ import java.math.BigDecimal
 import java.util.UUID
 
 object Customer : UUIDTable() {
-    val customerId = reference("customer_id", Users).uniqueIndex()
+    val customerId = reference("customer_id", User).uniqueIndex()
     val totalSpending = decimal("total_spending", 10, 2).default(BigDecimal.ZERO)
     val preferredCategory = text("preferred_category").nullable()
     // predefined the Categories, and use enum to

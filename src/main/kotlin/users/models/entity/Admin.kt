@@ -9,7 +9,7 @@ import org.jetbrains.exposed.sql.javatime.datetime
 import java.util.UUID
 
 object Admin : UUIDTable() {
-    val adminId = reference("admin_id", Users).uniqueIndex()
+    val adminId = reference("admin_id", User).uniqueIndex()
     val accessLevel = enumerationByName("access_level", 20, AdminAccessLevel::class)
     val lastActivity = datetime("last_activity").nullable()
     val department = varchar("department", 255).nullable()

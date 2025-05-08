@@ -8,7 +8,7 @@ import users.models.types.VerificationStatus
 import java.util.UUID
 
 object Organizer : UUIDTable() {
-    val organizerId = reference("organizer_id", Users).uniqueIndex()
+    val organizerId = reference("organizer_id", User).uniqueIndex()
     val organizationName = varchar("organization_name", 255)
     val contactEmail = varchar("contact_email", 255).nullable()
     val taxId = varchar("tax_id", 50).nullable()
