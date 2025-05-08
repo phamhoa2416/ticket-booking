@@ -30,9 +30,6 @@ data class UserCreateDTO(
 
     @SerialName("role")
     val role: UserRole,
-
-    @SerialName("notification_preferences")
-    val notificationPreferences: NotificationPreferencesDTO = NotificationPreferencesDTO()
 ) {
     init {
         require(username.length in 3..50) { "Username must be between 3-50 characters" }
@@ -59,7 +56,6 @@ data class UserUpdateDTO(
     val phoneNumber: String? = null,
     val dateOfBirth: LocalDate? = null,
     val avatarUrl: String? = null,
-    val notificationPreferencesDTO: NotificationPreferencesDTO? = null,
 )
 
 @Serializable
@@ -75,12 +71,4 @@ data class UserResponseDTO(
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime?,
     val lastLogin: LocalDateTime?,
-    val notificationPreferencesDTO: NotificationPreferencesDTO?,
-)
-
-@Serializable
-data class NotificationPreferencesDTO(
-    val emailNotifications: Boolean = true,
-    val pushNotifications: Boolean = true,
-    val smsNotifications: Boolean = false,
 )
