@@ -7,5 +7,16 @@ enum class EventCategory {
     THEATER,
     WORKSHOP,
     FESTIVAL,
-    OTHER
+    EXHIBITION,
+    OTHER;
+
+    companion object {
+        fun fromString(value: String): EventCategory {
+            return try {
+                valueOf(value.uppercase())
+            } catch (e: IllegalArgumentException) {
+                OTHER
+            }
+        }
+    }
 }
