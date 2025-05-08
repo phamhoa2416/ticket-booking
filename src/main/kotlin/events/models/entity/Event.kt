@@ -1,6 +1,7 @@
 package events.models.entity
 
 import events.models.types.EventCategory
+import events.models.types.EventStatus
 import events.models.types.VenueType
 import org.jetbrains.exposed.dao.UUIDEntity
 import org.jetbrains.exposed.dao.UUIDEntityClass
@@ -9,14 +10,16 @@ import org.jetbrains.exposed.dao.id.UUIDTable
 import org.jetbrains.exposed.sql.javatime.datetime
 import users.models.entity.OrganizerEntity
 import users.models.entity.Organizer
-import java.util.*
+import java.math.BigDecimal
+import java.util.UUID
 
 object Event : UUIDTable() {
     val title = varchar("title", 255)
     val description = text("description")
     val category = enumerationByName("category", 50, EventCategory::class)
-    val startTime = datetime("start_time")
-    val endTime = datetime("end_time")
+    val status = enumerationByName("status", 20, EventStatus::class).default(EventStatus.DRAFT)
+    val startDateTime = datetime("start_date_time")
+    val endDateTime = datetime("end_date_time")
     val venueName = varchar("venue_name", 255)
     val venueType = enumerationByName("venue_type", 20, VenueType::class)
     val address = text("address")
@@ -27,9 +30,9 @@ object Event : UUIDTable() {
     val capacity = integer("capacity")
     val availableTickets = integer("available_tickets")
     val basePrice = decimal("base_price", 10, 2)
-    val organizer = reference("organizer_id", Organizer)
-    val createdAt = datetime("created")
-    val updatedAt = datetime("updated").nullable()
+    val organizerId = reference("organizer_id", Organizer)
+    val createdAt = datetime("created_at")
+    val updatedAt = datetime("updated_at").nullable()
     val imageUrls = text("image_urls").nullable()
     val tags = text("tags").nullable()
 }
@@ -40,8 +43,9 @@ class EventEntity(id: EntityID<UUID>) : UUIDEntity(id) {
     var title by Event.title
     var description by Event.description
     var category by Event.category
-    var startTime by Event.startTime
-    var endTime by Event.endTime
+    var status by Event.status
+    var startDateTime by Event.startDateTime
+    var endDateTime by Event.endDateTime
     var venueName by Event.venueName
     var venueType by Event.venueType
     var address by Event.address
@@ -52,7 +56,7 @@ class EventEntity(id: EntityID<UUID>) : UUIDEntity(id) {
     var capacity by Event.capacity
     var availableTickets by Event.availableTickets
     var basePrice by Event.basePrice
-    var organizer by OrganizerEntity referencedOn Event.organizer
+    var organizer by OrganizerEntity referencedOn Event.organizerId
     var createdAt by Event.createdAt
     var updatedAt by Event.updatedAt
     var imageUrls by Event.imageUrls
