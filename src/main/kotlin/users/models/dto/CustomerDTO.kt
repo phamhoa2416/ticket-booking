@@ -8,7 +8,7 @@ import java.math.BigDecimal
 import java.util.UUID
 
 @Serializable
-data class CustomerDTO(
+data class CustomerCreateDTO(
     @Contextual val userId: UUID,
     val preferredCategory: String? = null,
     val paymentMethodDTO: List<PaymentMethodDTO>? = null,
