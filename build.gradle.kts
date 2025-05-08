@@ -41,7 +41,9 @@ dependencies {
     implementation(libs.koin.ktor)
     implementation(libs.koin.core)
     implementation(libs.jbcrypt)
+    implementation(libs.kotlin.logging)
     implementation(libs.logback.classic)
     testImplementation(libs.ktor.server.test.host)
+    implementation ("io.github.microutils:kotlin-logging-jvm:2.0.11")
     testImplementation(libs.kotlin.test.junit)
 }
