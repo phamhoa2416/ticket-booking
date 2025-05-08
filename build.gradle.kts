@@ -38,6 +38,8 @@ dependencies {
     implementation(libs.exposed.dao)
     implementation(libs.exposed.java.time)
     implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
+    implementation("org.mindrot:jbcrypt:0.4")
+    implementation("io.insert-koin:koin-core:3.5.0")
     implementation(libs.logback.classic)
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlin.test.junit)
