@@ -43,7 +43,7 @@ sealed class PaymentMethodDTO {
 data class CustomerResponseDTO(
     @Contextual val id: UUID,
     val user: UserResponseDTO,
-    val totalSpending: BigDecimal,
+    @Contextual val totalSpending: BigDecimal,
     val loyaltyPoints: Int = 0,
     val preferredCategory: String?,
     val paymentMethods: List<PaymentMethodDTO>?,

@@ -32,7 +32,7 @@ data class OrganizerResponseDTO(
     val user: UserResponseDTO,
     val organizationName: String,
     val verificationStatus: VerificationStatus,
-    val rating: BigDecimal?,
+    @Contextual val rating: BigDecimal?,
     val totalEvents: Int,
     val contactEmail: String?,
 )
