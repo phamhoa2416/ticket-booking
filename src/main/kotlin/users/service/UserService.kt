@@ -76,28 +76,6 @@ class UserService(private val userRepository: UserRepository) {
         }
     }
 
-    suspend fun softDeleteUser(userId: UUID) {
-        logger.info { "Soft deleting user with ID: $userId" }
-        try {
-            userRepository.softDeleteUser(userId)
-            logger.info { "Successfully soft deleted user with ID: $userId" }
-        } catch (e: Exception) {
-            logger.error(e) { "Failed to soft delete user with ID: $userId" }
-            throw e
-        }
-    }
-
-    suspend fun restoreUser(userId: UUID) {
-        logger.info { "Restoring user with ID: $userId" }
-        try {
-            userRepository.restoreUser(userId)
-            logger.info { "Successfully restored user with ID: $userId" }
-        } catch (e: Exception) {
-            logger.error(e) { "Failed to restore user with ID: $userId" }
-            throw e
-        }
-    }
-
     suspend fun getUserById(id: UUID): UserResponseDTO {
         logger.info { "Fetching user with ID: $id" }
         return try {
@@ -142,43 +120,6 @@ class UserService(private val userRepository: UserRepository) {
             }
         } catch (e: Exception) {
             logger.error(e) { "Failed to fetch users" }
-            throw e
-        }
-    }
-
-    suspend fun batchCreateUsers(users: List<UserCreateDTO>): List<UserResponseDTO> {
-        logger.info { "Batch creating ${users.size} users" }
-        users.forEach { validateUserCreateDTO(it) }
-        return try {
-            userRepository.batchCreateUsers(users).also {
-                logger.info { "Successfully batch created ${it.size} users" }
-            }
-        } catch (e: Exception) {
-            logger.error(e) { "Failed to batch create users" }
-            throw e
-        }
-    }
-
-    suspend fun batchUpdateUsers(updates: Map<UUID, UserUpdateDTO>): List<UserResponseDTO> {
-        logger.info { "Batch updating ${updates.size} users" }
-        updates.values.forEach { validateUserUpdateDTO(it) }
-        return try {
-            userRepository.batchUpdateUsers(updates).also {
-                logger.info { "Successfully batch updated ${it.size} users" }
-            }
-        } catch (e: Exception) {
-            logger.error(e) { "Failed to batch update users" }
-            throw e
-        }
-    }
-
-    suspend fun batchDeleteUsers(userIds: List<UUID>) {
-        logger.info { "Batch deleting ${userIds.size} users" }
-        try {
-            userRepository.batchDeleteUsers(userIds)
-            logger.info { "Successfully batch deleted ${userIds.size} users" }
-        } catch (e: Exception) {
-            logger.error(e) { "Failed to batch delete users" }
             throw e
         }
     }
