@@ -67,7 +67,6 @@ data class UserResponseDTO(
     val dateOfBirth: LocalDate?,
     val avatarUrl: String?,
     val isVerified: Boolean,
-    val isDeleted: Boolean,
     val role: UserRole,
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime?,

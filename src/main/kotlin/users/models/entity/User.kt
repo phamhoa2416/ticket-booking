@@ -17,7 +17,6 @@ object User : UUIDTable() {
     val dateOfBirth = date("date_of_birth").nullable()
     val avatarUrl = text("avatar_url").nullable()
     val isVerified = bool("is_verified").default(false)
-    val isDeleted = bool("is_deleted").default(false)
     val role = enumerationByName("role", 20, UserRole::class)
     val createdAt = datetime("created_at")
     val updatedAt = datetime("updated_at").nullable()
@@ -34,7 +33,6 @@ class UserEntity(id: EntityID<UUID>) : UUIDEntity(id) {
     var dateOfBirth by User.dateOfBirth
     var avatarUrl by User.avatarUrl
     var isVerified by User.isVerified
-    var isDeleted by User.isDeleted
     var role by User.role
     var createdAt by User.createdAt
     var updatedAt by User.updatedAt
