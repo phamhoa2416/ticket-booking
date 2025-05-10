@@ -13,7 +13,7 @@ object UserUtility {
 
     private val PASSWORD_PATTERN = Regex("^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=])(?=\\S+$).{8,}$")
     private val USERNAME_PATTERN = Regex("^[a-zA-Z0-9_-]{3,50}$")
-    private val PHONE_PATTERN = Regex("^\\+?[1-9]\\d{1,14}$")
+    private val PHONE_PATTERN = Regex("^[+]?[0-9]{10,15}\$")
     private val EMAIL_PATTERN = Regex("^[A-Za-z0-9+_.-]+@(.+)$")
 
     fun validateUserCreateDTO(
