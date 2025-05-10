@@ -11,9 +11,9 @@ import users.models.dto.UserResponseDTO
 import users.models.dto.UserUpdateDTO
 import users.models.entity.User
 import users.models.entity.UserEntity
-import users.utils.toJavaLocalDateTime
-import users.utils.toKotlinxDateTime
-import users.utils.toKotlinxLocalDate
+import config.toJavaLocalDateTime
+import config.toKotlinxDateTime
+import config.toKotlinxLocalDate
 import java.util.NoSuchElementException
 import java.util.UUID
 
