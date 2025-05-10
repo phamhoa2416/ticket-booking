@@ -1,20 +1,22 @@
-import com.example.plugins.configureDatabases
-import com.example.plugins.configureHTTP
-import com.example.plugins.configureMonitoring
-import com.example.plugins.configureRouting
-import com.example.plugins.configureSecurity
-import com.example.plugins.configureSerialization
 import io.ktor.server.application.*
-import io.ktor.server.netty.EngineMain
+import io.ktor.server.netty.*
+import io.ktor.server.routing.*
+import org.koin.ktor.plugin.Koin
+import org.koin.logger.slf4jLogger
+import plugins.*
+import users.di.userModule
 
 fun main(args: Array<String>) {
     EngineMain.main(args)
 }
 
 fun Application.module() {
-    configureSerialization()
+    install(Koin) {
+        slf4jLogger()
+        modules(userModule)
+    }
     configureDatabases()
-    configureSecurity()
+    // configureSecurity()
     configureMonitoring()
     configureHTTP()
     configureRouting()
