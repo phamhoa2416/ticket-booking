@@ -34,6 +34,8 @@ class UserRepositoryImpl : UserRepository {
         if (UserEntity.find { User.email eq user.email }.count() > 0)
             throw IllegalArgumentException("Email already exists")
 
+        val now = Clock.System.now().toLocalDateTime(TimeZone.UTC).toJavaLocalDateTime()
+        
         UserEntity.new {
             username = user.username
             email = user.email
@@ -42,6 +44,8 @@ class UserRepositoryImpl : UserRepository {
             dateOfBirth = user.dateOfBirth?.toJavaLocalDate()
             avatarUrl = user.avatarUrl
             role = user.role
+            createdAt = now
+            updatedAt = now
         }.toUserResponseDTO()
     }
 
