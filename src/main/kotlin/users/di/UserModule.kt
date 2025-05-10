@@ -9,5 +9,5 @@ import users.service.UserService
 val userModule = module {
     single<UserRepository> { UserRepositoryImpl() }
     single { UserService(get()) }
-    single { UserController() }
+    single { UserController(get()) }
 }
