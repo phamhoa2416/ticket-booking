@@ -1,4 +1,4 @@
-package users.utils
+package config
 
 import kotlinx.datetime.*
 import java.time.LocalDate as JavaLocalDate
