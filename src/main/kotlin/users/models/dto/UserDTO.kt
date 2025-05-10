@@ -30,31 +30,23 @@ data class UserCreateDTO(
 
     @SerialName("role")
     val role: UserRole,
-) {
-    init {
-        require(username.length in 3..50) { "Username must be between 3-50 characters" }
-        require(EMAIL_REGEX.matches(email)) { "Invalid email format" }
-        require(PASSWORD_REGEX.matches(password)) {
-            "Password must contain at least 8 characters, including uppercase, lowercase and numbers"
-        }
-        phoneNumber.takeIf { it.isNotBlank() }?.let {
-            require(PHONE_REGEX.matches(it)) { "Invalid phone number format" }
-        }
-    }
-
-    companion object {
-        private val EMAIL_REGEX = "^[A-Za-z0-9+_.-]+@(.+)\$".toRegex()
-        private val PASSWORD_REGEX = "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z]).{8,}\$".toRegex()
-        private val PHONE_REGEX = "^[+]?[0-9]{10,15}\$".toRegex()
-    }
-}
+)
 
 @Serializable
 data class UserUpdateDTO(
+    @SerialName("username")
     val username: String? = null,
+
+    @SerialName("email")
     val email: String? = null,
+
+    @SerialName("phone_number")
     val phoneNumber: String? = null,
+
+    @SerialName("date_of_birth")
     val dateOfBirth: LocalDate? = null,
+
+    @SerialName("avatar_url")
     val avatarUrl: String? = null,
 )
 
