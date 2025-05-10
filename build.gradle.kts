@@ -20,10 +20,14 @@ repositories {
 }
 
 dependencies {
-    implementation(libs.ktor.server.core)
+    implementation(libs.ktor.server.core) {
+        exclude(group = "io.insert-koin")
+    }
+    implementation(libs.ktor.server.netty) {
+        exclude(group = "io.insert-koin")
+    }
     implementation(libs.ktor.server.host.common)
     implementation(libs.ktor.serialization.kotlinx.json)
-    implementation(libs.ktor.serialization.jackson)
     implementation(libs.ktor.server.content.negotiation)
     implementation(libs.exposed.core)
     implementation(libs.exposed.jdbc)
@@ -34,7 +38,6 @@ dependencies {
     implementation(libs.ktor.server.call.logging)
     implementation(libs.ktor.server.status.pages)
     implementation(libs.ktor.server.cors)
-    implementation(libs.ktor.server.netty)
     implementation(libs.exposed.dao)
     implementation(libs.exposed.java.time)
     implementation(libs.kotlinx.datetime)
@@ -43,7 +46,7 @@ dependencies {
     implementation(libs.jbcrypt)
     implementation(libs.kotlin.logging)
     implementation(libs.logback.classic)
+    implementation(libs.koin.logger)
     testImplementation(libs.ktor.server.test.host)
-    implementation ("io.github.microutils:kotlin-logging-jvm:2.0.11")
     testImplementation(libs.kotlin.test.junit)
 }
