@@ -8,7 +8,7 @@ import users.models.entity.Organizer
 import users.models.entity.OrganizerEntity
 import users.models.entity.User
 import users.models.entity.UserEntity
-import users.utils.UserUtility
+import users.utility.UserUtils
 import java.util.UUID
 
 interface OrganizerRepository {
@@ -38,7 +38,7 @@ class OrganizerRepositoryImpl: OrganizerRepository {
             this.totalEvents = organizer.totalEvents ?: 0
         }
 
-        UserUtility.toOrganizeResponseDTO(organizerEntity)
+        UserUtils.toOrganizeResponseDTO(organizerEntity)
     }
 
     override suspend fun updateOrganizer(organizerId: UUID, organizer: OrganizerUpdateDTO): OrganizerResponseDTO = transaction {
@@ -53,7 +53,7 @@ class OrganizerRepositoryImpl: OrganizerRepository {
         organizerEntity.rating = organizer.rating ?: organizerEntity.rating
         organizerEntity.totalEvents = organizer.totalEvents ?: organizerEntity.totalEvents
 
-        UserUtility.toOrganizeResponseDTO(organizerEntity)
+        UserUtils.toOrganizeResponseDTO(organizerEntity)
     }
 
     override suspend fun deleteOrganizer(organizerId: UUID): Boolean = transaction {
@@ -63,29 +63,29 @@ class OrganizerRepositoryImpl: OrganizerRepository {
     }
 
     override suspend fun getAllOrganizers(): List<OrganizerResponseDTO> = transaction {
-        OrganizerEntity.all().map { UserUtility.toOrganizeResponseDTO(it) }
+        OrganizerEntity.all().map { UserUtils.toOrganizeResponseDTO(it) }
     }
 
     override suspend fun getOrganizerById(organizerId: UUID): OrganizerResponseDTO? = transaction {
-        OrganizerEntity.findById(organizerId)?.let { UserUtility.toOrganizeResponseDTO(it) }
+        OrganizerEntity.findById(organizerId)?.let { UserUtils.toOrganizeResponseDTO(it) }
     }
 
     override suspend fun getOrganizerByUserId(userId: UUID): OrganizerResponseDTO? = transaction {
         OrganizerEntity.find { Organizer.organizerId eq userId }.firstOrNull()?.let {
-            UserUtility.toOrganizeResponseDTO(it)
+            UserUtils.toOrganizeResponseDTO(it)
         }
     }
 
     override suspend fun getOrganizerByEmail(email: String): OrganizerResponseDTO? = transaction {
         val user = UserEntity.find { User.email eq email }.firstOrNull() ?: return@transaction null
         OrganizerEntity.find { Organizer.organizerId eq user.id }.firstOrNull()?.let {
-            UserUtility.toOrganizeResponseDTO(it)
+            UserUtils.toOrganizeResponseDTO(it)
         }
     }
 
     override suspend fun getOrganizationByName(organizationName: String): OrganizerResponseDTO? = transaction {
         OrganizerEntity.find { Organizer.organizationName eq organizationName }.firstOrNull()?.let {
-            UserUtility.toOrganizeResponseDTO(it)
+            UserUtils.toOrganizeResponseDTO(it)
         }
     }
 }
