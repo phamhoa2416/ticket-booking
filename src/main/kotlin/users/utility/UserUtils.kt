@@ -7,36 +7,7 @@ import users.models.dto.*
 import users.models.entity.*
 import java.time.LocalDate
 
-private val logger = KotlinLogging.logger {}
-
 object UserUtils {
-    fun validateUserCreateDTO(
-        email: String,
-        password: String,
-        username: String,
-        phoneNumber: String,
-        dateOfBirth: LocalDate?
-    ) {
-        ValidationUtils.validateEmail(email)
-        ValidationUtils.validatePassword(password)
-        ValidationUtils.validateUsername(username)
-        ValidationUtils.validatePhoneNumber(phoneNumber)
-        ValidationUtils.validateDateOfBirth(dateOfBirth)
-    }
-
-    fun validateUserUpdateDTO(
-        email: String?,
-        username: String?,
-        phoneNumber: String?,
-        dateOfBirth: LocalDate?
-    ) {
-        email?.let {ValidationUtils.validateEmail(it) }
-        username?.let { ValidationUtils.validateUsername(it) }
-        phoneNumber?.let { ValidationUtils.validatePhoneNumber(it) }
-        dateOfBirth?.let { ValidationUtils.validateDateOfBirth(it) }
-    }
-
-
     fun UserEntity.toUserResponseDTO(): UserResponseDTO {
         return UserResponseDTO(
             id = id.value,
