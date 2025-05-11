@@ -13,7 +13,10 @@ data class OrganizerCreateDTO(
     val taxId: String? = null,
     val businessLicense: String? = null,
     val bankAccount: String? = null,
-    val contactEmail: String? = null
+    val contactEmail: String? = null,
+    val verificationStatus: VerificationStatus = VerificationStatus.PENDING,
+    @Contextual val rating: BigDecimal? = null,
+    val totalEvents: Int? = null
 )
 
 @Serializable
@@ -23,7 +26,9 @@ data class OrganizerUpdateDTO(
     val businessLicense: String? = null,
     val bankAccount: String? = null,
     val contactEmail: String? = null,
-    val verificationStatus: VerificationStatus? = null
+    val verificationStatus: VerificationStatus? = null,
+    @Contextual val rating: BigDecimal? = null,
+    val totalEvents: Int? = null
 )
 
 @Serializable
