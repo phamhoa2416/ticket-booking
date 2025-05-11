@@ -19,7 +19,7 @@ class CacheManager {
         val expiration: Long
     )
 
-    suspend fun <T> get(key: String): T? {
+    fun <T> get(key: String): T? {
         return try {
             val entry = cache[key] ?: return null
             if (System.currentTimeMillis() > entry.expiration) {
@@ -35,7 +35,7 @@ class CacheManager {
         }
     }
 
-    suspend fun <T : Any> set(
+    fun <T : Any> set(
         key: String,
         value: T,
         expiration: Duration = expirationTime
@@ -49,7 +49,7 @@ class CacheManager {
         }
     }
 
-    suspend fun remove(key: String) {
+    fun remove(key: String) {
         try {
             cache.remove(key)
         } catch (e: Exception) {
@@ -58,7 +58,7 @@ class CacheManager {
         }
     }
 
-    suspend fun clear() {
+    fun clear() {
         try {
             cache.clear()
         } catch (e: Exception) {
