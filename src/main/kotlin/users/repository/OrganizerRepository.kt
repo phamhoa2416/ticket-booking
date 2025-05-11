@@ -44,7 +44,7 @@ class OrganizerRepositoryImpl: OrganizerRepository {
     override suspend fun updateOrganizer(organizerId: UUID, organizer: OrganizerUpdateDTO): OrganizerResponseDTO = transaction {
         val organizerEntity = OrganizerEntity.findById(organizerId) ?: throw NoSuchElementException("Organizer not found")
 
-        organizerEntity.organizationName?.let { organizerEntity.organizationName = it }
+        organizerEntity.organizationName.let { organizerEntity.organizationName = it }
         organizerEntity.taxId = organizer.taxId ?: organizerEntity.taxId
         organizerEntity.businessLicense = organizer.businessLicense ?: organizerEntity.businessLicense
         organizerEntity.bankAccount = organizer.bankAccount ?: organizerEntity.bankAccount
