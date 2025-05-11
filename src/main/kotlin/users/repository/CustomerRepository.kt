@@ -19,9 +19,10 @@ interface CustomerRepository {
     suspend fun deleteCustomer(customerId: UUID): Boolean
     suspend fun getAllCustomers(): List<CustomerResponseDTO>
     suspend fun getCustomerById(customerId: UUID): CustomerResponseDTO?
-    suspend fun getCustomerByUserId(userId: UUID): CustomerResponseDTO?
     suspend fun getCustomerByEmail(email: String): CustomerResponseDTO?
     suspend fun getCustomerByPhone(phoneNumber: String): CustomerResponseDTO?
+    suspend fun updateLoyaltyPoints(customerId: UUID, points: Int): CustomerResponseDTO
+    suspend fun updateTotalSpending(customerId: UUID, amount: BigDecimal): CustomerResponseDTO
 }
 
 class CustomerRepositoryImpl : CustomerRepository {
@@ -66,12 +67,6 @@ class CustomerRepositoryImpl : CustomerRepository {
         CustomerEntity.findById(customerId)?.let { UserUtils.toCustomerResponseDTO(it) }
     }
 
-    override suspend fun getCustomerByUserId(userId: UUID): CustomerResponseDTO? = transaction {
-        UserEntity.findById(userId)?.let { user ->
-            CustomerEntity.find { Customer.customerId eq user.id }.firstOrNull()?.let { UserUtils.toCustomerResponseDTO(it) }
-        }
-    }
-
     override suspend fun getCustomerByEmail(email: String): CustomerResponseDTO? = transaction {
         UserEntity.find { User.email eq email }.firstOrNull()?.let { user ->
             CustomerEntity.find { Customer.customerId eq user.id }.firstOrNull()?.let { UserUtils.toCustomerResponseDTO(it) }
@@ -82,5 +77,17 @@ class CustomerRepositoryImpl : CustomerRepository {
         UserEntity.find { User.phoneNumber eq phoneNumber }.firstOrNull()?.let { user ->
             CustomerEntity.find { Customer.customerId eq user.id }.firstOrNull()?.let { UserUtils.toCustomerResponseDTO(it) }
         }
+    }
+
+    override suspend fun updateLoyaltyPoints(customerId: UUID, points: Int): CustomerResponseDTO = transaction {
+        val customerEntity = CustomerEntity.findById(customerId) ?: throw UserNotFoundException(customerId)
+        customerEntity.loyaltyPoints += points
+        UserUtils.toCustomerResponseDTO(customerEntity)
+    }
+
+    override suspend fun updateTotalSpending(customerId: UUID, amount: BigDecimal): CustomerResponseDTO = transaction {
+        val customerEntity = CustomerEntity.findById(customerId) ?: throw UserNotFoundException(customerId)
+        customerEntity.totalSpending += amount
+        UserUtils.toCustomerResponseDTO(customerEntity)
     }
 }

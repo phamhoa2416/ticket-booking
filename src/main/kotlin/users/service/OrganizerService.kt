@@ -1,127 +1,274 @@
 package users.service
 
-import users.models.dto.OrganizerCreateDTO
-import users.models.dto.OrganizerResponseDTO
-import users.models.dto.OrganizerUpdateDTO
+import mu.KotlinLogging
+import users.exceptions.*
+import users.models.dto.*
+import users.models.entity.Organizer.rating
 import users.models.types.UserRole
+import users.models.types.VerificationStatus
 import users.repository.OrganizerRepository
 import users.repository.UserRepository
+import users.utility.*
+import java.math.BigDecimal
 import java.util.*
 
-private val logger = mu.KotlinLogging.logger {}
+private val logger = KotlinLogging.logger {}
 
-class OrganizerService (
+class OrganizerService(
     private val userRepository: UserRepository,
-    private val organizerRepository: OrganizerRepository
+    private val organizerRepository: OrganizerRepository,
+    private val cacheManager: CacheManager = CacheManager.getInstance()
 ) {
     suspend fun createOrganizer(organizer: OrganizerCreateDTO): OrganizerResponseDTO {
-        logger.info { "Creating new organizer with user id: ${organizer.userId}" }
+        logger.info { "Creating new organizer with user ID: ${organizer.userId}" }
 
+        // Validate user exists and has correct role
         val user = userRepository.getUserById(organizer.userId)
-
         if (user.role != UserRole.ORGANIZER) {
-            logger.error { "User with ID ${organizer.userId} is not an organizer." }
-            throw IllegalArgumentException("User must have ADMIN role")
+            throw InvalidUserRoleException(organizer.userId, UserRole.ORGANIZER)
         }
 
-        return try {
-            organizerRepository.createOrganizer(organizer).also {
-                logger.info { "Organizer created successfully with ID: ${it.id}" }
+        // Validate input
+        ValidationUtils.apply {
+            validateOrganizationName(organizer.organizationName)
+            validateTaxId(organizer.taxId)
+            organizer.contactEmail?.let { validateEmail(it) }
+            organizer.rating?.let { validateRating(it) }
+        }
+
+        return TransactionManager.withTransaction {
+            try {
+                val createdOrganizer = organizerRepository.createOrganizer(organizer)
+
+                cacheManager.set("organizer:${createdOrganizer.id}", createdOrganizer)
+
+                AuditLogger.logUserAction(
+                    userId = createdOrganizer.user.id,
+                    userRole = UserRole.ORGANIZER,
+                    action = "ORGANIZER_CREATED",
+                    details = mapOf(
+                        "organizerId" to createdOrganizer.id,
+                        "organizationName" to createdOrganizer.organizationName,
+                        "verificationStatus" to createdOrganizer.verificationStatus
+                    )
+                )
+
+                createdOrganizer
+            } catch (e: Exception) {
+                AuditLogger.logError(
+                    userId = organizer.userId,
+                    action = "ORGANIZER_CREATION_FAILED",
+                    error = e,
+                    details = mapOf("organizerData" to organizer.toString())
+                )
+                throw e
             }
-        } catch (e: Exception) {
-            logger.error(e) { "Failed to create organizer" }
-            throw e
         }
     }
 
     suspend fun updateOrganizer(organizerId: UUID, organizer: OrganizerUpdateDTO): OrganizerResponseDTO {
         logger.info { "Updating organizer with ID: $organizerId" }
 
-        return try {
-            organizerRepository.updateOrganizer(organizerId, organizer).also {
-                logger.info { "Organizer updated successfully with ID: ${it.id}" }
+        ValidationUtils.apply {
+            organizer.organizationName?.let { validateOrganizationName(it) }
+            organizer.taxId?.let { validateTaxId(it) }
+            organizer.contactEmail?.let { validateEmail(it) }
+            organizer.rating?.let { validateRating(it) }
+        }
+
+        return TransactionManager.withTransaction {
+            try {
+                val existingOrganizer = organizerRepository.getOrganizerById(organizerId)
+                    ?: throw UserNotFoundException(organizerId)
+
+                val updatedOrganizer = organizerRepository.updateOrganizer(organizerId, organizer)
+
+                cacheManager.set("organizer:${updatedOrganizer.id}", updatedOrganizer)
+
+                AuditLogger.logUserAction(
+                    userId = updatedOrganizer.user.id,
+                    userRole = UserRole.ORGANIZER,
+                    action = "ORGANIZER_UPDATED",
+                    details = mapOf(
+                        "organizerId" to organizerId,
+                        "updatedFields" to organizer.toString(),
+                        "previousStatus" to existingOrganizer.verificationStatus,
+                        "newStatus" to updatedOrganizer.verificationStatus
+                    )
+                )
+
+                updatedOrganizer
+            } catch (e: Exception) {
+                AuditLogger.logError(
+                    userId = null,
+                    action = "ORGANIZER_UPDATE_FAILED",
+                    error = e,
+                    details = mapOf(
+                        "organizerId" to organizerId,
+                        "updateData" to organizer.toString()
+                    )
+                )
+                throw e
             }
-        } catch (e: Exception) {
-            logger.error(e) { "Failed to update organizer" }
-            throw e
         }
     }
 
     suspend fun deleteOrganizer(organizerId: UUID): Boolean {
         logger.info { "Deleting organizer with ID: $organizerId" }
 
-        return try {
-            organizerRepository.deleteOrganizer(organizerId).also {
-                logger.info { "Organizer deleted successfully with ID: $organizerId" }
-            }
-        } catch (e: Exception) {
-            logger.error(e) { "Failed to delete organizer" }
-            throw e
-        }
-    }
+        return TransactionManager.withTransaction {
+            try {
+                val organizer = organizerRepository.getOrganizerById(organizerId)
+                    ?: throw UserNotFoundException(organizerId)
 
-    suspend fun getAllOrganizers(): List<OrganizerResponseDTO> {
-        logger.info { "Fetching all organizers" }
+                val deleted = organizerRepository.deleteOrganizer(organizerId)
 
-        return try {
-            organizerRepository.getAllOrganizers().also {
-                logger.info { "Fetched ${it.size} organizers" }
+                if (deleted) {
+                    cacheManager.remove("organizer:$organizerId")
+
+                    AuditLogger.logUserAction(
+                        userId = organizer.user.id,
+                        userRole = UserRole.ORGANIZER,
+                        action = "ORGANIZER_DELETED",
+                        details = mapOf(
+                            "organizerId" to organizerId,
+                            "organizationName" to organizer.organizationName,
+                            "totalEvents" to organizer.totalEvents
+                        )
+                    )
+                }
+
+                deleted
+            } catch (e: Exception) {
+                AuditLogger.logError(
+                    userId = null,
+                    action = "ORGANIZER_DELETION_FAILED",
+                    error = e,
+                    details = mapOf("organizerId" to organizerId)
+                )
+                throw e
             }
-        } catch (e: Exception) {
-            logger.error(e) { "Failed to fetch organizers" }
-            throw e
         }
     }
 
     suspend fun getOrganizerById(organizerId: UUID): OrganizerResponseDTO? {
         logger.info { "Fetching organizer with ID: $organizerId" }
 
-        return try {
-            organizerRepository.getOrganizerById(organizerId).also {
-                logger.info { "Fetched organizer with ID: $organizerId" }
+        return cacheManager.getOrSet("organizer:$organizerId") {
+            TransactionManager.withReadOnlyTransaction {
+                try {
+                    organizerRepository.getOrganizerById(organizerId)?.also { organizer ->
+                        AuditLogger.logDataAccess(
+                            userId = organizer.user.id,
+                            userRole = UserRole.ORGANIZER,
+                            resourceType = "Organizer",
+                            resourceId = organizerId,
+                            action = "GET_ORGANIZER"
+                        )
+                    } ?: throw NoSuchElementException("Organizer not found with ID: $organizerId")
+                } catch (e: Exception) {
+                    AuditLogger.logError(
+                        userId = null,
+                        action = "GET_ORGANIZER_FAILED",
+                        error = e,
+                        details = mapOf("organizerId" to organizerId)
+                    )
+                    throw e
+                }
             }
-        } catch (e: Exception) {
-            logger.error(e) { "Failed to fetch organizer" }
-            throw e
         }
     }
 
-    suspend fun getOrganizerByUserId(userId: UUID): OrganizerResponseDTO? {
-        logger.info { "Fetching organizer with user ID: $userId" }
+    suspend fun updateVerificationStatus(
+        organizerId: UUID,
+        status: VerificationStatus
+    ): OrganizerResponseDTO {
+        logger.info { "Updating verification status for organizer ID: $organizerId" }
 
-        return try {
-            organizerRepository.getOrganizerByUserId(userId).also {
-                logger.info { "Fetched organizer with user ID: $userId" }
+        return TransactionManager.withTransaction {
+            try {
+                val organizer = organizerRepository.getOrganizerById(organizerId)
+                    ?: throw UserNotFoundException(organizerId)
+
+                val updatedOrganizer = organizerRepository.updateOrganizer(
+                    organizerId,
+                    OrganizerUpdateDTO(verificationStatus = status)
+                )
+
+                cacheManager.set("organizer:${updatedOrganizer.id}", updatedOrganizer)
+
+                AuditLogger.logUserAction(
+                    userId = updatedOrganizer.user.id,
+                    userRole = UserRole.ORGANIZER,
+                    action = "VERIFICATION_STATUS_UPDATED",
+                    details = mapOf(
+                        "organizerId" to organizerId,
+                        "previousRating" to (organizer.rating ?: BigDecimal.ZERO),
+                        "newRating" to rating,
+                    )
+                )
+
+                updatedOrganizer
+            } catch (e: Exception) {
+                AuditLogger.logError(
+                    userId = null,
+                    action = "VERIFICATION_STATUS_UPDATE_FAILED",
+                    error = e,
+                    details = mapOf(
+                        "organizerId" to organizerId,
+                        "status" to status
+                    )
+                )
+                throw e
             }
-        } catch (e: Exception) {
-            logger.error(e) { "Failed to fetch organizer" }
-            throw e
         }
     }
 
-    suspend fun getOrganizerByEmail(email: String): OrganizerResponseDTO? {
-        logger.info { "Fetching organizer with email: $email" }
+    suspend fun updateRating(
+        organizerId: UUID,
+        rating: BigDecimal
+    ): OrganizerResponseDTO {
+        logger.info { "Updating rating for organizer ID: $organizerId" }
 
-        return try {
-            organizerRepository.getOrganizerByEmail(email).also {
-                logger.info { "Fetched organizer with email: $email" }
+        ValidationUtils.validateRating(rating)
+
+        return TransactionManager.withTransaction {
+            try {
+                val organizer = organizerRepository.getOrganizerById(organizerId)
+                    ?: throw UserNotFoundException(organizerId)
+
+                val updatedOrganizer = organizerRepository.updateOrganizer(
+                    organizerId,
+                    OrganizerUpdateDTO(rating = rating)
+                )
+
+                cacheManager.set("organizer:${updatedOrganizer.id}", updatedOrganizer)
+
+                AuditLogger.logUserAction(
+                    userId = updatedOrganizer.user.id,
+                    userRole = UserRole.ORGANIZER,
+                    action = "RATING_UPDATED",
+                    details = mapOf(
+                        "organizerId" to organizerId,
+                        "previousRating" to (organizer.rating ?: BigDecimal.ZERO),
+                        "newRating" to rating,
+                        "ratingDifference" to rating.subtract(organizer.rating ?: BigDecimal.ZERO)
+                    )
+                )
+
+                updatedOrganizer
+            } catch (e: Exception) {
+                AuditLogger.logError(
+                    userId = null,
+                    action = "RATING_UPDATE_FAILED",
+                    error = e,
+                    details = mapOf(
+                        "organizerId" to organizerId,
+                        "rating" to rating
+                    )
+                )
+                throw e
             }
-        } catch (e: Exception) {
-            logger.error(e) { "Failed to fetch organizer" }
-            throw e
-        }
-    }
-
-    suspend fun getOrganizationByName(organizationName: String): OrganizerResponseDTO? {
-        logger.info { "Fetching organization with name: $organizationName" }
-
-        return try {
-            organizerRepository.getOrganizationByName(organizationName).also {
-                logger.info { "Fetched organization with name: $organizationName" }
-            }
-        } catch (e: Exception) {
-            logger.error(e) { "Failed to fetch organization" }
-            throw e
         }
     }
 }

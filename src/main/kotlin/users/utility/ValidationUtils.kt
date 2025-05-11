@@ -1,5 +1,6 @@
 package users.utility
 
+import events.models.types.EventCategory
 import java.time.LocalDate
 import users.exceptions.ValidationException
 import users.models.dto.PaymentMethodDTO
@@ -132,6 +133,18 @@ object ValidationUtils {
     fun validateTotalSpending(amount: BigDecimal) {
         if (amount < BigDecimal.ZERO) {
             throw ValidationException("totalSpending", "Total spending cannot be negative")
+        }
+    }
+
+    fun validateCategory(category: EventCategory) {
+        if (category == EventCategory.UNKNOWN) {
+            throw ValidationException("category", "Invalid event category")
+        }
+    }
+
+    fun validateRating(rating: BigDecimal) {
+        if (rating < BigDecimal.ZERO || rating > BigDecimal(5)) {
+            throw ValidationException("rating", "Rating must be between 0 and 5")
         }
     }
 }
