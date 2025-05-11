@@ -1,13 +1,15 @@
 package users.service
 
 import mu.KotlinLogging
+import users.exceptions.InvalidUserRoleException
+import users.exceptions.UserNotFoundException
 import users.models.dto.CustomerCreateDTO
 import users.models.dto.CustomerResponseDTO
 import users.models.dto.CustomerUpdateDTO
 import users.models.types.UserRole
 import users.repository.CustomerRepository
 import users.repository.UserRepository
-import users.utils.UserUtility
+import users.utility.UserUtils
 import java.math.BigDecimal
 import java.util.*
 
@@ -20,9 +22,10 @@ class CustomerService(
     suspend fun createCustomer(customer: CustomerCreateDTO): CustomerResponseDTO {
         logger.info { "Creating new customer with id: ${customer.userId}" }
 
-        val user = userRepository.getUserById(customer.userId)
+        val user = userRepository.getUserById(customer.userId) ?: throw UserNotFoundException(customer.userId)
+
         if (user.role != UserRole.CUSTOMER) {
-            throw IllegalArgumentException("User must have CUSTOMER role")
+            throw InvalidUserRoleException(customer.userId, UserRole.CUSTOMER)
         }
 
         return try {
@@ -50,7 +53,9 @@ class CustomerService(
     suspend fun deleteCustomer(customerId: UUID) {
         logger.info { "Deleting customer with ID: $customerId" }
         try {
-            customerRepository.deleteCustomer(customerId)
+            if (!customerRepository.deleteCustomer(customerId)) {
+                throw UserNotFoundException(customerId)
+            }
             logger.info { "Successfully deleted customer with ID: $customerId" }
         } catch (e: Exception) {
             logger.error(e) { "Failed to delete customer with ID: $customerId" }
@@ -98,7 +103,7 @@ class CustomerService(
         logger.info { "Updating preferences for customer ID: $customerId" }
         val updateDTO = CustomerUpdateDTO(
             preferredCategory = preferences["preferredCategory"] as? String,
-            paymentMethods = (preferences["paymentMethods"] as? String)?.let { UserUtility.convertStringToPaymentMethods(it) }
+            paymentMethods = (preferences["paymentMethods"] as? String)?.let { UserUtils.convertStringToPaymentMethods(it) }
         )
         return updateCustomer(customerId, updateDTO)
     }
