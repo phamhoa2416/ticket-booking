@@ -1,126 +1,114 @@
 package users.service
 
+import mu.KotlinLogging
 import users.models.dto.CustomerCreateDTO
 import users.models.dto.CustomerResponseDTO
 import users.models.dto.CustomerUpdateDTO
 import users.models.types.UserRole
 import users.repository.CustomerRepository
 import users.repository.UserRepository
+import users.utils.UserUtility
+import java.math.BigDecimal
 import java.util.*
 
-private val logger = mu.KotlinLogging.logger {}
+private val logger = KotlinLogging.logger {}
 
 class CustomerService(
-    private val userRepository: UserRepository,
-    private val customerRepository: CustomerRepository
+    private val customerRepository: CustomerRepository,
+    private val userRepository: UserRepository
 ) {
     suspend fun createCustomer(customer: CustomerCreateDTO): CustomerResponseDTO {
-        logger.info {"Creating new customer with user id: ${customer.userId}"}
+        logger.info { "Creating new customer with id: ${customer.userId}" }
 
         val user = userRepository.getUserById(customer.userId)
         if (user.role != UserRole.CUSTOMER) {
-            logger.error { "User with ID ${customer.userId} is not a customer." }
-            throw IllegalArgumentException("User must have CUSTOMER role.")
+            throw IllegalArgumentException("User must have CUSTOMER role")
         }
 
         return try {
             customerRepository.createCustomer(customer).also {
-                logger.info { "Customer created successfully with ID: ${it.id}" }
+                logger.info { "Successfully created customer with ID: ${it.id}" }
             }
         } catch (e: Exception) {
-            logger.error(e) { "Failed to create customer: ${e.message}" }
+            logger.error(e) { "Failed to create customer with id: ${customer.userId}" }
             throw e
         }
     }
 
     suspend fun updateCustomer(customerId: UUID, customer: CustomerUpdateDTO): CustomerResponseDTO {
         logger.info { "Updating customer with ID: $customerId" }
-
         return try {
             customerRepository.updateCustomer(customerId, customer).also {
-                logger.info { "Customer updated successfully with ID: ${it.id}" }
+                logger.info { "Successfully updated customer with ID: $customerId" }
             }
         } catch (e: Exception) {
-            logger.error(e) { "Failed to update customer: ${e.message}" }
+            logger.error(e) { "Failed to update customer with ID: $customerId" }
             throw e
         }
     }
 
-    suspend fun deleteCustomer(customerId: UUID): Boolean {
+    suspend fun deleteCustomer(customerId: UUID) {
         logger.info { "Deleting customer with ID: $customerId" }
-
-        return try {
-            customerRepository.deleteCustomer(customerId).also {
-                logger.info { "Customer deleted successfully with ID: $customerId" }
-            }
+        try {
+            customerRepository.deleteCustomer(customerId)
+            logger.info { "Successfully deleted customer with ID: $customerId" }
         } catch (e: Exception) {
-            logger.error(e) { "Failed to delete customer: ${e.message}" }
+            logger.error(e) { "Failed to delete customer with ID: $customerId" }
+            throw e
+        }
+    }
+
+    suspend fun getCustomerById(id: UUID): CustomerResponseDTO {
+        logger.info { "Fetching customer with ID: $id" }
+        return try {
+            customerRepository.getCustomerById(id)?.also {
+                logger.info { "Successfully fetched customer with ID: $id" }
+            } ?: throw NoSuchElementException("Customer not found")
+        } catch (e: Exception) {
+            logger.error(e) { "Failed to fetch customer with ID: $id" }
+            throw e
+        }
+    }
+
+    suspend fun getCustomerByUserId(userId: UUID): CustomerResponseDTO {
+        logger.info { "Fetching customer for user ID: $userId" }
+        return try {
+            customerRepository.getCustomerByUserId(userId)?.also {
+                logger.info { "Successfully fetched customer for user ID: $userId" }
+            } ?: throw NoSuchElementException("Customer not found")
+        } catch (e: Exception) {
+            logger.error(e) { "Failed to fetch customer for user ID: $userId" }
             throw e
         }
     }
 
     suspend fun getAllCustomers(): List<CustomerResponseDTO> {
         logger.info { "Fetching all customers" }
-
         return try {
             customerRepository.getAllCustomers().also {
-                logger.info { "Fetched ${it.size} customers successfully" }
+                logger.info { "Successfully fetched ${it.size} customers" }
             }
         } catch (e: Exception) {
-            logger.error(e) { "Failed to fetch customers: ${e.message}" }
+            logger.error(e) { "Failed to fetch customers" }
             throw e
         }
     }
 
-    suspend fun getCustomerById(customerId: UUID): CustomerResponseDTO? {
-        logger.info { "Fetching customer with ID: $customerId" }
-
-        return try {
-            customerRepository.getCustomerById(customerId).also {
-                logger.info { "Fetched customer successfully with ID: $customerId" }
-            }
-        } catch (e: Exception) {
-            logger.error(e) { "Failed to fetch customer: ${e.message}" }
-            throw e
-        }
+    suspend fun updateCustomerPreferences(customerId: UUID, preferences: Map<String, Any>): CustomerResponseDTO {
+        logger.info { "Updating preferences for customer ID: $customerId" }
+        val updateDTO = CustomerUpdateDTO(
+            preferredCategory = preferences["preferredCategory"] as? String,
+            paymentMethods = (preferences["paymentMethods"] as? String)?.let { UserUtility.convertStringToPaymentMethods(it) }
+        )
+        return updateCustomer(customerId, updateDTO)
     }
 
-    suspend fun getCustomerByUserId(userId: UUID): CustomerResponseDTO? {
-        logger.info { "Fetching customer with user ID: $userId" }
-
-        return try {
-            customerRepository.getCustomerByUserId(userId).also {
-                logger.info { "Fetched customer successfully with user ID: $userId" }
-            }
-        } catch (e: Exception) {
-            logger.error(e) { "Failed to fetch customer: ${e.message}" }
-            throw e
-        }
-    }
-
-    suspend fun getCustomerByEmail(email: String): CustomerResponseDTO? {
-        logger.info { "Fetching customer with email: $email" }
-
-        return try {
-            customerRepository.getCustomerByEmail(email).also {
-                logger.info { "Fetched customer successfully with email: $email" }
-            }
-        } catch (e: Exception) {
-            logger.error(e) { "Failed to fetch customer: ${e.message}" }
-            throw e
-        }
-    }
-
-    suspend fun getCustomerByPhone(phoneNumber: String): CustomerResponseDTO? {
-        logger.info { "Fetching customer with phone number: $phoneNumber" }
-
-        return try {
-            customerRepository.getCustomerByPhone(phoneNumber).also {
-                logger.info { "Fetched customer successfully with phone number: $phoneNumber" }
-            }
-        } catch (e: Exception) {
-            logger.error(e) { "Failed to fetch customer: ${e.message}" }
-            throw e
-        }
+    suspend fun updateCustomerSpending(customerId: UUID, amount: BigDecimal): CustomerResponseDTO {
+        logger.info { "Updating spending for customer ID: $customerId" }
+        val customer = getCustomerById(customerId)
+        val updateDTO = CustomerUpdateDTO(
+            totalSpending = customer.totalSpending + amount
+        )
+        return updateCustomer(customerId, updateDTO)
     }
 }
