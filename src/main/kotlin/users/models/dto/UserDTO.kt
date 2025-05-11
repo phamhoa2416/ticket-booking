@@ -5,6 +5,7 @@ import kotlinx.datetime.LocalDateTime
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import users.models.types.PrivacyLevel
 import users.models.types.UserRole
 import java.util.UUID
 
@@ -63,4 +64,19 @@ data class UserResponseDTO(
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime?,
     val lastLogin: LocalDateTime?,
+)
+
+@Serializable
+data class UserPreferencesDTO(
+    val language: String = "en",
+    val timezone: String = "UTC",
+    val notificationEnabled: Boolean = true,
+    val emailNotifications: Boolean = true,
+    val smsNotifications: Boolean = false,
+    val pushNotifications: Boolean = true,
+    val theme: String = "light",
+    val currency: String = "USD",
+    val dateFormat: String = "yyyy-MM-dd",
+    val timeFormat: String = "HH:mm",
+    val privacyLevel: PrivacyLevel = PrivacyLevel.STANDARD
 )
