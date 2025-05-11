@@ -3,91 +3,183 @@ package users.service
 import mu.KotlinLogging
 import kotlinx.datetime.toJavaLocalDate
 import org.mindrot.jbcrypt.BCrypt
+import users.exceptions.DuplicateResourceException
 import users.models.dto.UserCreateDTO
 import users.models.dto.UserResponseDTO
 import users.models.dto.UserUpdateDTO
 import users.repository.UserRepository
-import users.utils.UserUtility
+import users.utility.*
 import java.util.*
 
 private val logger = KotlinLogging.logger {}
 
-class UserService(private val userRepository: UserRepository) {
+class UserService(
+    private val userRepository: UserRepository,
+    private val cacheManager: CacheManager = CacheManager.getInstance()
+) {
     suspend fun createUser(user: UserCreateDTO): UserResponseDTO {
         logger.info { "Creating new user with email: ${user.email}" }
-        UserUtility.validateUserCreateDTO(
-            email = user.email,
-            password = user.password,
-            username = user.username,
-            phoneNumber = user.phoneNumber,
-            dateOfBirth = user.dateOfBirth?.toJavaLocalDate()
-        )
-        val hashedUser = user.copy(password = BCrypt.hashpw(user.password, BCrypt.gensalt()))
 
-        if (userRepository.existsByEmail(hashedUser.email)) {
-            logger.warn { "Email ${hashedUser.email} already exists" }
-            throw IllegalArgumentException("Email ${hashedUser.email} already exists")
+        ValidationUtils.apply {
+            validateEmail(user.email)
+            validatePassword(user.password)
+            validateUsername(user.username)
+            validatePhoneNumber(user.phoneNumber)
+            validateDateOfBirth(user.dateOfBirth?.toJavaLocalDate())
         }
 
-        return try {
-            userRepository.createUser(hashedUser).also {
-                logger.info { "Successfully created user with ID: ${it.id}" }
+        if (userRepository.existsByEmail(user.email)) {
+            logger.warn { "Email ${user.email} already exists" }
+            throw DuplicateResourceException("User", user.email)
+        }
+
+        return TransactionManager.withTransaction {
+            try {
+                val hashedUser = user.copy(
+                    password = BCrypt.hashpw(user.password, BCrypt.gensalt())
+                )
+                val createdUser = userRepository.createUser(hashedUser)
+
+                cacheManager.set(
+                    key = "user:${createdUser.id}",
+                    value = createdUser,
+                )
+
+                AuditLogger.logUserAction(
+                    userId = createdUser.id,
+                    userRole = createdUser.role,
+                    action = "USER_CREATED",
+                    details = mapOf(
+                        "email" to createdUser.email,
+                        "username" to createdUser.username,
+                        "role" to createdUser.role,
+                    )
+                )
+
+                createdUser
+            } catch (e: Exception) {
+                AuditLogger.logError(
+                    userId = null,
+                    action = "USER_CREATION_FAILED",
+                    error = e,
+                    details = mapOf("email" to user.email)
+                )
+                throw e
             }
-        } catch (e: Exception) {
-            logger.error(e) { "Failed to create user with email: ${user.email}" }
-            throw e
         }
     }
 
     suspend fun updateUser(userId: UUID, user: UserUpdateDTO): UserResponseDTO {
         logger.info { "Updating user with ID: $userId" }
-        UserUtility.validateUserUpdateDTO(
-            email = user.email,
-            username = user.username,
-            phoneNumber = user.phoneNumber,
-            dateOfBirth = user.dateOfBirth?.toJavaLocalDate()
-        )
 
-        user.email?.let {
-            if (it != userRepository.getUserById(userId).email && userRepository.existsByEmail(it)) {
-                logger.warn { "Email $it already exists" }
-                throw IllegalArgumentException("Email $it already exists")
-            }
+        ValidationUtils.apply {
+            user.email?.let { validateEmail(it) }
+            user.username?.let { validateUsername(it) }
+            user.phoneNumber?.let { validatePhoneNumber(it) }
+            user.dateOfBirth?.let { validateDateOfBirth(it.toJavaLocalDate()) }
         }
 
-        return try {
-            userRepository.updateUser(userId, user).also {
-                logger.info { "Successfully updated user with ID: $userId" }
+        return TransactionManager.withTransaction {
+            try {
+                val existingUser = userRepository.getUserById(userId)
+
+                user.email?.let { newEmail ->
+                    if (newEmail != existingUser.email && userRepository.existsByEmail(newEmail)) {
+                        throw DuplicateResourceException("User", newEmail)
+                    }
+                }
+
+                val updatedUser = userRepository.updateUser(userId, user)
+
+                cacheManager.set(
+                    key = "user:${updatedUser.id}",
+                    value = updatedUser,
+                )
+
+                AuditLogger.logUserAction(
+                    userId = updatedUser.id,
+                    userRole = updatedUser.role,
+                    action = "USER_UPDATED",
+                    details = mapOf(
+                        "updatedFields" to user.toString(),
+                        "previousEmail" to existingUser.email,
+                        "newEmail" to updatedUser.email
+                    )
+                )
+
+                updatedUser
+            } catch (e: Exception) {
+                AuditLogger.logError(
+                    userId = userId,
+                    action = "USER_UPDATE_FAILED",
+                    error = e,
+                    details = mapOf("userId" to userId.toString())
+                )
+                throw e
             }
-        } catch (e: Exception) {
-            logger.error(e) { "Failed to update user with ID: $userId" }
-            throw e
         }
     }
 
     suspend fun deleteUser(userId: UUID) {
         logger.info { "Deleting user with ID: $userId" }
-        try {
-            userRepository.deleteUser(userId)
-            logger.info { "Successfully deleted user with ID: $userId" }
-        } catch (e: Exception) {
-            logger.error(e) { "Failed to delete user with ID: $userId" }
-            throw e
+
+        TransactionManager.withTransaction {
+            try {
+                val user = userRepository.getUserById(userId)
+                userRepository.deleteUser(userId)
+
+                cacheManager.remove(key = "user:${user.id}")
+
+                AuditLogger.logUserAction(
+                    userId = userId,
+                    userRole = user.role,
+                    action = "USER_DELETED",
+                    details = mapOf(
+                        "email" to user.email,
+                        "username" to user.username,
+                    )
+                )
+            } catch (e: Exception) {
+                AuditLogger.logError(
+                    userId = userId,
+                    action = "USER_DELETION_FAILED",
+                    error = e,
+                    details = emptyMap()
+                )
+                throw e
+            }
         }
     }
 
     suspend fun getUserById(id: UUID): UserResponseDTO {
         logger.info { "Fetching user with ID: $id" }
-        return try {
-            userRepository.getUserById(id).also {
-                logger.info { "Successfully fetched user with ID: $id" }
+
+        return cacheManager.getOrSet("user:$id") {
+            TransactionManager.withTransaction {
+                try {
+                    userRepository.getUserById(id).also { user ->
+                        AuditLogger.logDataAccess(
+                            userId = id,
+                            userRole = user.role,
+                            resourceType = "User",
+                            resourceId = id,
+                            action = "GET_USER"
+                        )
+                    }
+                } catch (e: Exception) {
+                    AuditLogger.logError(
+                        userId = id,
+                        action = "GET_USER_FAILED",
+                        error = e,
+                        details = emptyMap()
+                    )
+                    throw e
+                }
             }
-        } catch (e: Exception) {
-            logger.error(e) { "Failed to fetch user with ID: $id" }
-            throw e
         }
     }
 
+    // TODO: Fix with cache manager
     suspend fun getUserByUsername(username: String): UserResponseDTO? {
         logger.info { "Fetching user with username: $username" }
         return try {
@@ -100,6 +192,7 @@ class UserService(private val userRepository: UserRepository) {
         }
     }
 
+    // TODO: Fix with cache manager
     suspend fun getUserByEmail(email: String): UserResponseDTO? {
         logger.info { "Fetching user with email: $email" }
         return try {
@@ -112,6 +205,7 @@ class UserService(private val userRepository: UserRepository) {
         }
     }
 
+    // TODO: Fix with cache manager
     suspend fun findAll(page: Int, pageSize: Int): List<UserResponseDTO> {
         logger.info { "Fetching users page: $page with size: $pageSize" }
         return try {
