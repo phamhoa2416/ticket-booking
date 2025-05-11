@@ -11,13 +11,14 @@ fun main(args: Array<String>) {
 }
 
 fun Application.module() {
-    install(Koin) {
-        slf4jLogger()
-        modules(userModule)
-    }
+//    install(Koin) {
+//        slf4jLogger()
+//        modules(userModule)
+//    }
     configureDatabases()
     // configureSecurity()
     configureMonitoring()
-    configureHTTP()
+//    configureHTTP()
+    configureSerialization()
     configureRouting()
 }
