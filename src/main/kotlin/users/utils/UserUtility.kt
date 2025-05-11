@@ -1,7 +1,14 @@
 package users.utils
 
-import java.time.LocalDate
+import config.toKotlinxDateTime
+import config.toKotlinxLocalDate
 import mu.KotlinLogging
+import users.models.dto.*
+import users.models.entity.AdminEntity
+import users.models.entity.CustomerEntity
+import users.models.entity.OrganizerEntity
+import users.models.entity.UserEntity
+import java.time.LocalDate
 
 private val logger = KotlinLogging.logger {}
 
@@ -79,5 +86,72 @@ object UserUtility {
 
     fun logValidationError(field: String, error: String) {
         logger.error { "Validation error for $field: $error" }
+    }
+
+    fun UserEntity.toUserResponseDTO(): UserResponseDTO {
+        return UserResponseDTO(
+            id = id.value,
+            email = email,
+            username = username,
+            phoneNumber = phoneNumber,
+            dateOfBirth = dateOfBirth?.toKotlinxLocalDate(),
+            avatarUrl = avatarUrl,
+            role = role,
+            isVerified = isVerified,
+            createdAt = createdAt.toKotlinxDateTime(),
+            updatedAt = updatedAt?.toKotlinxDateTime(),
+            lastLogin = lastLogin?.toKotlinxDateTime(),
+        )
+    }
+
+    fun toCustomerResponseDTO(customerEntity: CustomerEntity): CustomerResponseDTO {
+        return CustomerResponseDTO(
+            id = customerEntity.id.value,
+            user = customerEntity.user.toUserResponseDTO(),
+            totalSpending = customerEntity.totalSpending,
+            loyaltyPoints = customerEntity.loyaltyPoints,
+            preferredCategory = customerEntity.preferredCategory,
+            paymentMethods = customerEntity.paymentMethods?.let { convertStringToPaymentMethods(it) },
+            attendanceHistory = getAttendanceHistory()
+        )
+    }
+
+    fun OrganizerEntity.toOrganizeResponseDTO(): OrganizerResponseDTO {
+        return OrganizerResponseDTO(
+            id = id.value,
+            user = user.toUserResponseDTO(),
+            organizationName = organizationName,
+            verificationStatus = verificationStatus,
+            contactEmail = contactEmail,
+            rating = rating,
+            totalEvents = totalEvents
+        )
+    }
+
+    fun AdminEntity.toAdminResponseDTO(): AdminResponseDTO {
+        return AdminResponseDTO(
+            id = id.value,
+            user = user.toUserResponseDTO(),
+            accessLevel = accessLevel,
+            lastActivity = lastActivity?.toKotlinxDateTime(),
+            department = department,
+            actionHistory = getActionHistory()
+        )
+    }
+
+    fun convertStringToPaymentMethods(paymentMethods: String): List<PaymentMethodDTO> {
+        return emptyList() // TODO: Implement this method to convert the string to a list of PaymentMethodDTO
+    }
+
+    fun convertPaymentMethodsToString(paymentMethods: List<PaymentMethodDTO>): String {
+        return "" // TODO: Implement this method to convert the list of PaymentMethodDTO to a string
+    }
+
+    fun getAttendanceHistory(): List<EventAttendanceDTO> {
+        return emptyList() // TODO: Implement this method to fetch the attendance history
+    }
+
+    fun getActionHistory(): List<AdminActionDTO> {
+        return emptyList() // TODO: Implement this method to fetch the action history
     }
 }
