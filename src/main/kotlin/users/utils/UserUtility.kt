@@ -116,15 +116,15 @@ object UserUtility {
         )
     }
 
-    fun OrganizerEntity.toOrganizeResponseDTO(): OrganizerResponseDTO {
+    fun toOrganizeResponseDTO(organizerEntity: OrganizerEntity): OrganizerResponseDTO {
         return OrganizerResponseDTO(
-            id = id.value,
-            user = user.toUserResponseDTO(),
-            organizationName = organizationName,
-            verificationStatus = verificationStatus,
-            contactEmail = contactEmail,
-            rating = rating,
-            totalEvents = totalEvents
+            id = organizerEntity.id.value,
+            user = organizerEntity.user.toUserResponseDTO(),
+            organizationName = organizerEntity.organizationName,
+            verificationStatus = organizerEntity.verificationStatus,
+            contactEmail = organizerEntity.contactEmail,
+            rating = organizerEntity.rating,
+            totalEvents = organizerEntity.totalEvents
         )
     }
 
