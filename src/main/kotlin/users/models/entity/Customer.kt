@@ -13,6 +13,7 @@ object Customer : UUIDTable() {
     val preferredCategory = text("preferred_category").nullable()
     // predefined the Categories, and use enum to
     // store the preferred category with reference("category_id", Categories).nullable()
+    var loyaltyPoints = integer("loyalty_points").default(0)
     val paymentMethods = text("payment_methods").nullable()
 }
 
@@ -23,6 +24,6 @@ class CustomerEntity(id: EntityID<UUID>) : UUIDEntity(id) {
     var totalSpending by Customer.totalSpending
     var preferredCategory by Customer.preferredCategory
     var paymentMethods by Customer.paymentMethods
-
+    var loyaltyPoints by Customer.loyaltyPoints
     // Relationships
 }
