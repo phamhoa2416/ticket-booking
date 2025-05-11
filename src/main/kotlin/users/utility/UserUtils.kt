@@ -1,28 +1,15 @@
-package users.utils
+package users.utility
 
 import config.toKotlinxDateTime
 import config.toKotlinxLocalDate
 import mu.KotlinLogging
 import users.models.dto.*
-import users.models.entity.AdminEntity
-import users.models.entity.CustomerEntity
-import users.models.entity.OrganizerEntity
-import users.models.entity.UserEntity
+import users.models.entity.*
 import java.time.LocalDate
 
 private val logger = KotlinLogging.logger {}
 
-object UserUtility {
-    private const val MIN_PASSWORD_LENGTH = 8
-    private const val MAX_PASSWORD_LENGTH = 100
-    private const val MIN_USERNAME_LENGTH = 3
-    private const val MAX_USERNAME_LENGTH = 50
-
-    private val PASSWORD_PATTERN = Regex("^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=])(?=\\S+$).{8,}$")
-    private val USERNAME_PATTERN = Regex("^[a-zA-Z0-9_-]{3,50}$")
-    private val PHONE_PATTERN = Regex("^[+]?[0-9]{10,15}\$")
-    private val EMAIL_PATTERN = Regex("^[A-Za-z0-9+_.-]+@(.+)$")
-
+object UserUtils {
     fun validateUserCreateDTO(
         email: String,
         password: String,
@@ -30,11 +17,11 @@ object UserUtility {
         phoneNumber: String,
         dateOfBirth: LocalDate?
     ) {
-        validateEmail(email)
-        validatePassword(password)
-        validateUsername(username)
-        validatePhoneNumber(phoneNumber)
-        validateDateOfBirth(dateOfBirth)
+        ValidationUtils.validateEmail(email)
+        ValidationUtils.validatePassword(password)
+        ValidationUtils.validateUsername(username)
+        ValidationUtils.validatePhoneNumber(phoneNumber)
+        ValidationUtils.validateDateOfBirth(dateOfBirth)
     }
 
     fun validateUserUpdateDTO(
@@ -43,50 +30,12 @@ object UserUtility {
         phoneNumber: String?,
         dateOfBirth: LocalDate?
     ) {
-        email?.let { validateEmail(it) }
-        username?.let { validateUsername(it) }
-        phoneNumber?.let { validatePhoneNumber(it) }
-        dateOfBirth?.let { validateDateOfBirth(it) }
+        email?.let {ValidationUtils.validateEmail(it) }
+        username?.let { ValidationUtils.validateUsername(it) }
+        phoneNumber?.let { ValidationUtils.validatePhoneNumber(it) }
+        dateOfBirth?.let { ValidationUtils.validateDateOfBirth(it) }
     }
 
-    private fun validateEmail(email: String) {
-        require(email.matches(EMAIL_PATTERN)) { "Invalid email format" }
-    }
-
-    private fun validatePassword(password: String) {
-        require(password.length in MIN_PASSWORD_LENGTH..MAX_PASSWORD_LENGTH) {
-            "Password must be between $MIN_PASSWORD_LENGTH and $MAX_PASSWORD_LENGTH characters"
-        }
-        require(password.matches(PASSWORD_PATTERN)) {
-            "Password must contain at least one digit, one lowercase letter, one uppercase letter, and one special character"
-        }
-    }
-
-    private fun validateUsername(username: String) {
-        require(username.length in MIN_USERNAME_LENGTH..MAX_USERNAME_LENGTH) {
-            "Username must be between $MIN_USERNAME_LENGTH and $MAX_USERNAME_LENGTH characters"
-        }
-        require(username.matches(USERNAME_PATTERN)) {
-            "Username can only contain letters, numbers, underscores, and hyphens"
-        }
-    }
-
-    private fun validatePhoneNumber(phoneNumber: String?) {
-        phoneNumber?.let {
-            require(it.matches(PHONE_PATTERN)) { "Invalid phone number format" }
-        }
-    }
-
-    private fun validateDateOfBirth(dateOfBirth: LocalDate?) {
-        dateOfBirth?.let {
-            require(it.isBefore(LocalDate.now())) { "Date of birth cannot be in the future" }
-            require(it.isAfter(LocalDate.now().minusYears(150))) { "Invalid date of birth" }
-        }
-    }
-
-    fun logValidationError(field: String, error: String) {
-        logger.error { "Validation error for $field: $error" }
-    }
 
     fun UserEntity.toUserResponseDTO(): UserResponseDTO {
         return UserResponseDTO(
