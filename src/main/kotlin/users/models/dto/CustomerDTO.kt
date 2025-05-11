@@ -11,13 +11,17 @@ import java.util.UUID
 data class CustomerCreateDTO(
     @Contextual val userId: UUID,
     val preferredCategory: String? = null,
-    val paymentMethodDTO: List<PaymentMethodDTO>? = null,
+    val paymentMethods: List<PaymentMethodDTO>? = null,
+    @Contextual val totalSpending: BigDecimal? = null,
+    val loyaltyPoints: Int? = null
 )
 
 @Serializable
 data class CustomerUpdateDTO(
     val preferredCategory: String? = null,
-    val paymentMethods: List<PaymentMethodDTO>? = null
+    val paymentMethods: List<PaymentMethodDTO>? = null,
+    @Contextual val totalSpending: BigDecimal? = null,
+    val loyaltyPoints: Int? = null
 )
 
 @Serializable
