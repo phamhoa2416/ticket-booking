@@ -1,5 +1,6 @@
 package users.models.dto
 
+import events.models.types.TicketType
 import kotlinx.datetime.LocalDateTime
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
@@ -59,5 +60,7 @@ data class EventAttendanceDTO(
     @Contextual val eventId: UUID,
     val eventTitle: String,
     val attendedAt: LocalDateTime,
-    val ticketCount: Int
+    val ticketCount: Int,
+    val status: String,
+    val ticketType: TicketType
 )
