@@ -5,10 +5,11 @@ import config.toKotlinxLocalDate
 import mu.KotlinLogging
 import users.models.dto.*
 import users.models.entity.*
-import java.time.LocalDate
+
+private val logger = KotlinLogging.logger {}
 
 object UserUtils {
-    fun UserEntity.toUserResponseDTO(): UserResponseDTO {
+    private fun UserEntity.toUserResponseDTO(): UserResponseDTO {
         return UserResponseDTO(
             id = id.value,
             email = email,
@@ -59,19 +60,48 @@ object UserUtils {
         )
     }
 
-    fun convertStringToPaymentMethods(paymentMethods: String): List<PaymentMethodDTO> {
-        return emptyList() // TODO: Implement this method to convert the string to a list of PaymentMethodDTO
+    private fun convertStringToPaymentMethods(paymentMethods: String): List<PaymentMethodDTO> {
+        if (paymentMethods.isBlank()) return emptyList()
+        
+        return try {
+            paymentMethods.split("|").map { method ->
+                val parts = method.split(":")
+                when (parts[0]) {
+                    "CREDIT_CARD" -> PaymentMethodDTO.CreditCardDTO(
+                        last4 = parts[1],
+                        brand = parts[2],
+                        expiration = parts[3]
+                    )
+                    "PAYPAL" -> PaymentMethodDTO.PayPalDTO(
+                        email = parts[1]
+                    )
+                    else -> throw IllegalArgumentException("Unknown payment method type: ${parts[0]}")
+                }
+            }
+        } catch (e: Exception) {
+            logger.error(e) { "Error converting payment methods string: $paymentMethods" }
+            emptyList()
+        }
     }
 
     fun convertPaymentMethodsToString(paymentMethods: List<PaymentMethodDTO>): String {
-        return "" // TODO: Implement this method to convert the list of PaymentMethodDTO to a string
+        if (paymentMethods.isEmpty()) return ""
+        
+        return paymentMethods.joinToString("|") { method ->
+            when (method) {
+                is PaymentMethodDTO.CreditCardDTO -> "CREDIT_CARD:${method.last4}:${method.brand}:${method.expiration}"
+                is PaymentMethodDTO.PayPalDTO -> "PAYPAL:${method.email}"
+            }
+        }
     }
 
-    fun getAttendanceHistory(): List<EventAttendanceDTO> {
-        return emptyList() // TODO: Implement this method to fetch the attendance history
+    private fun getAttendanceHistory(): List<EventAttendanceDTO> {
+        // TODO: Implement this method to fetch attendance history
+        return emptyList()
     }
 
-    fun getActionHistory(): List<AdminActionDTO> {
-        return emptyList() // TODO: Implement this method to fetch the action history
+    private fun getActionHistory(): List<AdminActionDTO> {
+        // TODO: Implement this method to fetch action history
+        return emptyList()
     }
 }
