@@ -8,6 +8,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
+import users.controllers.CustomerController
 import users.controllers.UserController
 import users.di.UserDependencies
 
@@ -21,6 +22,11 @@ fun Application.configureRouting() {
         val userController: UserController = UserDependencies.userController
         with(userController) {
             userRoutes()
+        }
+
+        val customerController: CustomerController = UserDependencies.customerController
+        with(customerController) {
+            customerRoutes()
         }
     }
 }
