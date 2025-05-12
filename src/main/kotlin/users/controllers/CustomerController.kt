@@ -82,26 +82,12 @@ class CustomerController(private val customerService: CustomerService) {
                 }
             }
 
-            get("user/userId") {
-                try {
-                    val userId = UUID.fromString(call.parameters["userId"] ?: throw IllegalArgumentException("Invalid user ID"))
-                    val customerResponse = customerService.getCustomerByUserId(userId)
-                    call.respond(HttpStatusCode.OK, customerResponse)
-                } catch (e: IllegalArgumentException) {
-                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to (e.message ?: "Invalid input")))
-                } catch (e: NoSuchElementException) {
-                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "Customer not found"))
-                } catch (e: Exception) {
-                    call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Failed to retrieve customer"))
-                }
-            }
-
-            // Update customer preferences
-            put ("/id/preferences") {
+            // Update customer loyalty points
+            put ("/id/loyalty-points") {
                 try {
                     val customerId = UUID.fromString(call.parameters["id"] ?: throw IllegalArgumentException("Invalid customer ID"))
-                    val preferences = call.receive<Map<String, Any>>()
-                    val customerResponse = customerService.updateCustomerPreferences(customerId, preferences)
+                    val preferences = call.receive<Int>()
+                    val customerResponse = customerService.updateLoyaltyPoints(customerId, preferences)
                     call.respond(HttpStatusCode.OK, customerResponse)
                 } catch (e: IllegalArgumentException) {
                     call.respond(HttpStatusCode.BadRequest, mapOf("error" to (e.message ?: "Invalid input")))
@@ -117,7 +103,7 @@ class CustomerController(private val customerService: CustomerService) {
                 try {
                     val customerId = UUID.fromString(call.parameters["id"] ?: throw IllegalArgumentException("Invalid customer ID"))
                     val amount = call.receive<Map<String, BigDecimal>>()["amount"] ?: throw IllegalArgumentException("Amount is required")
-                    val customerResponse = customerService.updateCustomerSpending(customerId, amount)
+                    val customerResponse = customerService.updateTotalSpending(customerId, amount)
                     call.respond(HttpStatusCode.OK, customerResponse)
                 } catch (e: IllegalArgumentException) {
                     call.respond(HttpStatusCode.BadRequest, mapOf("error" to (e.message ?: "Invalid input")))
