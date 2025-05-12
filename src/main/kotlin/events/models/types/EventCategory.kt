@@ -8,6 +8,7 @@ enum class EventCategory {
     WORKSHOP,
     FESTIVAL,
     EXHIBITION,
+    UNKNOWN,
     OTHER;
 
     companion object {
