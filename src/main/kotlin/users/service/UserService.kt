@@ -179,38 +179,66 @@ class UserService(
         }
     }
 
-    // TODO: Fix with cache manager
     suspend fun getUserByUsername(username: String): UserResponseDTO? {
         logger.info { "Fetching user with username: $username" }
-        return try {
-            userRepository.getUserByUsername(username).also {
-                logger.info { "Successfully fetched user with username: $username" }
+
+        return cacheManager.getOrSet("user:username:$username") {
+            TransactionManager.withTransaction {
+                try {
+                    userRepository.getUserByUsername(username)?.also { user ->
+                        AuditLogger.logDataAccess(
+                            userId = user.id,
+                            userRole = user.role,
+                            resourceType = "User",
+                            resourceId = user.id,
+                            action = "GET_USER_BY_USERNAME"
+                        )
+                    } ?: throw NoSuchElementException("User not found with username: $username")
+                } catch (e: Exception) {
+                    AuditLogger.logError(
+                        userId = null,
+                        action = "GET_USER_BY_USERNAME_FAILED",
+                        error = e,
+                        details = mapOf("username" to username)
+                    )
+                    throw e
+                }
             }
-        } catch (e: Exception) {
-            logger.error(e) { "Failed to fetch user with username: $username" }
-            throw e
         }
     }
 
-    // TODO: Fix with cache manager
     suspend fun getUserByEmail(email: String): UserResponseDTO? {
         logger.info { "Fetching user with email: $email" }
         return try {
-            userRepository.getUserByEmail(email).also {
-                logger.info { "Successfully fetched user with email: $email" }
+            cacheManager.getOrSet("user:email:$email") {
+                userRepository.getUserByEmail(email)?.also { user ->
+                    AuditLogger.logDataAccess(
+                        userId = user.id,
+                        userRole = user.role,
+                        resourceType = "User",
+                        resourceId = user.id,
+                        action = "GET_USER_BY_EMAIL"
+                    )
+                } ?: throw NoSuchElementException("User not found with email: $email")
             }
         } catch (e: Exception) {
-            logger.error(e) { "Failed to fetch user with email: $email" }
+            AuditLogger.logError(
+                userId = null,
+                action = "GET_USER_BY_EMAIL_FAILED",
+                error = e,
+                details = mapOf("email" to email)
+            )
             throw e
         }
     }
 
-    // TODO: Fix with cache manager
     suspend fun findAll(page: Int, pageSize: Int): List<UserResponseDTO> {
         logger.info { "Fetching users page: $page with size: $pageSize" }
         return try {
-            userRepository.findAll(page, pageSize).also {
-                logger.info { "Successfully fetched ${it.size} users" }
+            cacheManager.getOrSet("users:page:$page:size:$pageSize") {
+                userRepository.findAll(page, pageSize).also {
+                    logger.info { "Successfully fetched ${it.size} users" }
+                }
             }
         } catch (e: Exception) {
             logger.error(e) { "Failed to fetch users" }
