@@ -4,17 +4,22 @@ import mu.KotlinLogging
 import kotlinx.datetime.toJavaLocalDate
 import org.mindrot.jbcrypt.BCrypt
 import users.exceptions.DuplicateResourceException
+import users.models.dto.CustomerCreateDTO
 import users.models.dto.UserCreateDTO
 import users.models.dto.UserResponseDTO
 import users.models.dto.UserUpdateDTO
+import users.models.types.UserRole
 import users.repository.UserRepository
+import users.repository.CustomerRepository
 import users.utility.*
 import java.util.*
+import java.math.BigDecimal
 
 private val logger = KotlinLogging.logger {}
 
 class UserService(
     private val userRepository: UserRepository,
+    private val customerRepository: CustomerRepository,
     private val cacheManager: CacheManager = CacheManager.getInstance()
 ) {
     suspend fun createUser(user: UserCreateDTO): UserResponseDTO {
@@ -39,6 +44,18 @@ class UserService(
                     password = BCrypt.hashpw(user.password, BCrypt.gensalt())
                 )
                 val createdUser = userRepository.createUser(hashedUser)
+
+                if (createdUser.role == UserRole.CUSTOMER) {
+                    customerRepository.createCustomer(
+                        CustomerCreateDTO(
+                            userId = createdUser.id,
+                            preferredCategory = null,
+                            paymentMethods = null,
+                            totalSpending = BigDecimal.ZERO,
+                            loyaltyPoints = 0
+                        )
+                    )
+                }
 
                 cacheManager.set(
                     key = "user:${createdUser.id}",
